@@ -6,6 +6,7 @@ import re
 import configparser
 import datetime
 import requests
+import time
 
 
 CONFIG_FILE = 'config.ini'
@@ -63,64 +64,72 @@ if "rebrickable" in config:
 else:
     RB_API_KEY = ""
 
+while True:
+    for subreddit in subreddits:
 
-for subreddit in subreddits:
+        log("")
+        log("Scanning /r/" + subreddit)
 
-    log("")
-    log("Scanning /r/" + subreddit)
+        sub = r.get_subreddit(subreddit)
+        sub_comments = sub.get_comments()
 
-    sub = r.get_subreddit(subreddit)
-    sub_comments = sub.get_comments()
+        if subreddit in config:
+            last_processed_time = float(config[subreddit].get('last_processed_time', 0))
+        else:
+            last_processed_time = 0
+        new_last_processed_time = last_processed_time
+        log("last processed time = " + str(last_processed_time))
 
-    if subreddit in config:
-        last_processed_time = float(config[subreddit].get('last_processed_time', 0))
-    else:
-        last_processed_time = 0
-    new_last_processed_time = last_processed_time
-    log("last processed time = " + str(last_processed_time))
+        first = True
+        try:
+            for comment in sub_comments:
+                # Comments in reverse chronological order (most recent first)
+                if first:
+                    new_last_processed_time = comment.created_utc
+                first = False
 
-    first = True
-    for comment in sub_comments:
-        # Comments in reverse chronological order (most recent first)
-        if first:
-            new_last_processed_time = comment.created_utc
-        first = False
+                log(comment.id)
+                log(" Time: " + str(comment.created_utc))
+                if comment.created_utc <= last_processed_time:
+                    log("Already processed")
+                    break
 
-        log(comment.id)
-        log(" Time: " + str(comment.created_utc))
-        if comment.created_utc <= last_processed_time:
-            log("Already processed, exiting")
-            break
+                log(" By: " + comment.author.name)
+                if comment.author.name in ['LegoLinkBot', 'legopartsbot']:
+                    log("Skipping")
+                    continue
 
-        log(" By: " + comment.author.name)
-        if comment.author.name in ['LegoLinkBot', 'legopartsbot']:
-            log("Skipping")
-            continue
+                log(" Body: " + comment.body)
+                parts = get_parts(comment.body)
 
-        log(" Body: " + comment.body)
-        parts = get_parts(comment.body)
+                if parts:
+                    log(" Found parts: " + " ".join(parts))
+                    reply = "Part ID | Image | Name | Years\n"
+                    reply += "--|--|--|--\n"
+                    num_found = 0
+                    for part in parts:
+                        part_details = get_part_details(part)
+                        if part_details and 'part_url' in part_details:
+                            reply += "[" + part + "](" + part_details['part_url'] + ")|"
+                            reply += "[img](" + part_details['part_img_url'] + ")|"
+                            reply += part_details['name'] + "|"
+                            reply += part_details['year1'] + " to " + part_details['year2'] + "\n"
+                            num_found += 1
+                    reply += "*****\n"
+                    reply += "I'm a bot! I try to identify LEGO part numbers in comments and display details of those parts using the [Rebrickable API](https://rebrickable.com). Created by /u/someotheridiot"
+                    if num_found > 0:
+                        log(" Replying for " + str(num_found) + " parts")
+                        comment.reply(reply)
+                        time.sleep(1)
+        except requests.exceptions.ReadTimeout:
+            # Just sleep and try again
+            pass
 
-        if parts:
-            log(" Found parts: " + " ".join(parts))
-            reply = "Part ID | Image | Name | Years\n"
-            reply += "--|--|--|--\n"
-            num_found = 0
-            for part in parts:
-                part_details = get_part_details(part)
-                if part_details and 'part_url' in part_details:
-                    reply += "[" + part + "](" + part_details['part_url'] + ")|"
-                    reply += "[img](" + part_details['part_img_url'] + ")|"
-                    reply += part_details['name'] + "|"
-                    reply += part_details['year1'] + " to " + part_details['year2'] + "\n"
-                    num_found += 1
-            reply += "*****\n"
-            reply += "I'm a bot! I try to identify LEGO part numbers in comments and display details of those parts using the [Rebrickable API](https://rebrickable.com). Created by /u/someotheridiot"
-            if num_found > 0:
-                log(" Replying for " + str(num_found) + " parts")
-                comment.reply(reply)
+        config[subreddit] = {'last_processed_time': new_last_processed_time}
 
+        with open(CONFIG_FILE, 'w') as configfile:
+            config.write(configfile)
 
-    config[subreddit] = {'last_processed_time': new_last_processed_time}
-
-    with open(CONFIG_FILE, 'w') as configfile:
-        config.write(configfile)
+    # Wait one minute and run again
+    log("Sleeping")
+    time.sleep(60)
