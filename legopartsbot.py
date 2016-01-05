@@ -11,14 +11,6 @@ import time
 
 CONFIG_FILE = 'config.ini'
 
-def get_parts(text):
-    # (?:^|\s) = part must be start of a new word
-    # \d{3,} = Must start with at least 3 digits (not interested in ancient parts, avoid lots of false hits)
-    # [0-9a-z]* = Can have any lower case alphas/digits after the initial digits
-    parts = re.findall(r'(?:^|\s)(\d{3,}[0-9a-z]*)', text)
-    #print(parts)
-    return list(set(parts))
-
 
 def log(msg):
     print(datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S") + ' - ' + msg)
@@ -31,7 +23,33 @@ def get_part_details(part_id):
         if r.text == "NOPART":
             return {}
         else:
-            return r.json()
+            # Valid part, make sure it's not a valid set too (which is the most common use case of the number)
+            url = "https://rebrickable.com/api/get_set?key=" + RB_API_KEY + "&format=json&set_id=" + part_id + "-1"
+            s = requests.get(url)
+            if s.status_code == 200:
+                if s.text == "NOSET":
+                    # Keep the part
+                    return r.json()
+                else:
+                    return {}
+
+
+def get_parts(text):
+    # (?:^|\s) = part must be start of a new word
+    # \d{3,} = Must start with at least 3 digits (not interested in ancient parts, avoid lots of false hits)
+    # [0-9a-z]* = Can have any lower case alphas/digits after the initial digits
+    # (?:$|\s|\.|\?) = must end with whitespace or terminal punctuation
+    parts = re.findall(r'(?:^|\s)(\d{3,}[0-9a-z]*)(?:$|\s|\.|\?)', text)
+    # My regex skills can only go so far... further prune parts list
+    for p in parts[:]:
+        if p in ['2013','2014','2015','2016','2017','2018','2019','2020']:
+            # Years
+            parts.remove(p)
+        if p in ['200','600','700','800']:
+            # Exclude round numbers like 200, 600 as they are most likely not referring to parts
+            parts.remove(p)
+    #print(parts)
+    return list(set(parts))
 
 
 # Some tests to make sure the regex works for all cases
@@ -47,15 +65,23 @@ assert(get_parts('1') == [])
 assert(get_parts('111') == ['111'])
 assert(get_parts('$111') == [])
 assert(get_parts('$4073') == [])
+assert(get_parts('4073%') == [])
+assert(get_parts('4073€') == [])
+assert(get_parts('4073 is 100€') == ['4073'])
+assert(get_parts('4073£') == [])
+assert(get_parts('4073-4074') == [])
+assert(get_parts('200-400 piece sets') == [])
+assert(get_parts('2016') == []) # year, not part
+
 
 log("Logging in")
-user_agent = "python:legoparts:v1.0 (by /u/someotheridiot) "
+user_agent = "python:legoparts:v1.1 (by /u/someotheridiot) "
 r = praw.Reddit(user_agent=user_agent)
 o = OAuth2Util.OAuth2Util(r)
 o.refresh(force=True)
 
-#subreddits = ['legopartsbottest', 'lego']
-subreddits = ['legopartsbottest']
+subreddits = ['legopartsbottest', 'lego']
+#subreddits = ['legopartsbottest']
 
 config = configparser.ConfigParser()
 config.read(CONFIG_FILE)
@@ -99,7 +125,7 @@ while True:
                     log("Skipping")
                     continue
 
-                log(" Body: " + comment.body)
+                #log(" Body: " + comment.body)
                 parts = get_parts(comment.body)
 
                 if parts:
@@ -113,14 +139,19 @@ while True:
                             reply += "[" + part + "](" + part_details['part_url'] + ")|"
                             reply += "[img](" + part_details['part_img_url'] + ")|"
                             reply += part_details['name'] + "|"
-                            reply += part_details['year1'] + " to " + part_details['year2'] + "\n"
+                            if part_details['year1'] != 0 and part_details['year2'] != 0:
+                                reply += str(part_details['year1']) + " to " + str(part_details['year2'])
+                            reply += "\n"
                             num_found += 1
                     reply += "*****\n"
                     reply += "I'm a bot! I try to identify LEGO part numbers in comments and display details of those parts using the [Rebrickable API](https://rebrickable.com). Created by /u/someotheridiot"
                     if num_found > 0:
                         log(" Replying for " + str(num_found) + " parts")
-                        comment.reply(reply)
-                        time.sleep(1)
+                        try:
+                            comment.reply(reply)
+                            time.sleep(30)
+                        except praw.errors.RateLimitExceeded:
+                            time.sleep(600)
         except requests.exceptions.ReadTimeout:
             # Just sleep and try again
             pass
@@ -130,6 +161,6 @@ while True:
         with open(CONFIG_FILE, 'w') as configfile:
             config.write(configfile)
 
-    # Wait one minute and run again
+    # Wait and run again
     log("Sleeping")
-    time.sleep(60)
+    time.sleep(300)
