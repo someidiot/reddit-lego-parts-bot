@@ -32,6 +32,7 @@ def get_part_details(part_id):
                     return r.json()
                 else:
                     return {}
+    return {}
 
 
 def get_parts(text):
@@ -41,20 +42,26 @@ def get_parts(text):
     # (?:$|\s|\.|\?) = must end with whitespace or terminal punctuation
     parts = re.findall(r'(?:^|\s)(\d{3,}[0-9a-z]*)(?:$|\s|\.|\?)', text)
     # My regex skills can only go so far... further prune parts list
+    # Get a list of all words, split on alphanumeric or whitespace
+    all_words = re.compile(r'[\s\W]+').split(text)
+    #log("Words = " + str(all_words))
     for p in parts[:]:
         if p in ['2013','2014','2015','2016','2017','2018','2019','2020']:
             # Years
             parts.remove(p)
-        if p in ['200','600','700','800']:
-            # Exclude round numbers like 200, 600 as they are most likely not referring to parts
+        if p[-2:] == '00' or p[-3:] == '000' or p[-4:] == '0000':
+            # Exclude round numbers like 200, 600, 4000 as they are most likely not referring to parts
             parts.remove(p)
-    #print(parts)
+        i = all_words.index(p)
+        if len(all_words)>i+1 and all_words[i+1].lower() in ['feet','inches','meters','cms','m','years','hours','hrs']:
+            parts.remove(p)
+    #log("Parts = " + str(parts))
     return list(set(parts))
 
 
 # Some tests to make sure the regex works for all cases
 assert(get_parts('3001') == ['3001'])
-assert(get_parts('6538b') == ['6538b'])
+assert(get_parts('this is part 6538b') == ['6538b'])
 assert(get_parts('92817pr0004c01') == ['92817pr0004c01'])
 assert(get_parts('32310pb01') == ['32310pb01'])
 assert(get_parts('970c153pr0750') == ['970c153pr0750'])
@@ -72,6 +79,8 @@ assert(get_parts('4073£') == [])
 assert(get_parts('4073-4074') == [])
 assert(get_parts('200-400 piece sets') == [])
 assert(get_parts('2016') == []) # year, not part
+assert(get_parts('Currently we have over 1000 sets in our possession and maybe like 4000 figs.') == []) # Just assume any round number is not a part
+assert(get_parts('Super Star Destroyer: 2375 feet (3001.9 meters)') == [])
 
 
 log("Logging in")
@@ -152,8 +161,9 @@ while True:
                             time.sleep(30)
                         except praw.errors.RateLimitExceeded:
                             time.sleep(600)
-        except requests.exceptions.ReadTimeout:
-            # Just sleep and try again
+        except Exception as e:
+            # Can't connect to Reddit... just sleep and try again
+            log("Exception: " + str(e))
             pass
 
         config[subreddit] = {'last_processed_time': new_last_processed_time}
