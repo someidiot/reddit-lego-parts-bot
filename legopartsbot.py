@@ -53,7 +53,8 @@ def get_parts(text):
             # Exclude round numbers like 200, 600, 4000 as they are most likely not referring to parts
             parts.remove(p)
         i = all_words.index(p)
-        if len(all_words)>i+1 and all_words[i+1].lower() in ['feet','inches','meters','cms','m','years','hours','hrs']:
+        if len(all_words)>i+1 and all_words[i+1].lower() in ['feet','inches','meters','cms','m','years','hours','hrs',
+                                                             'pieces','parts']:
             parts.remove(p)
     #log("Parts = " + str(parts))
     return list(set(parts))
@@ -78,10 +79,10 @@ assert(get_parts('4073 is 100€') == ['4073'])
 assert(get_parts('4073£') == [])
 assert(get_parts('4073-4074') == [])
 assert(get_parts('200-400 piece sets') == [])
-assert(get_parts('2016') == []) # year, not part
-assert(get_parts('Currently we have over 1000 sets in our possession and maybe like 4000 figs.') == []) # Just assume any round number is not a part
+assert(get_parts('2016') == [])  # year, not part
+assert(get_parts('Currently we have over 1000 sets in our possession and maybe like 4000 figs.') == [])  # Just assume any round number is not a part
 assert(get_parts('Super Star Destroyer: 2375 feet (3001.9 meters)') == [])
-
+assert(get_parts('It has 2526 pieces') == [])
 
 log("Logging in")
 user_agent = "python:legoparts:v1.1 (by /u/someotheridiot) "
