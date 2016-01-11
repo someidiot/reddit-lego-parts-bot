@@ -39,8 +39,8 @@ def get_parts(text):
     # (?:^|\s) = part must be start of a new word
     # \d{3,} = Must start with at least 3 digits (not interested in ancient parts, avoid lots of false hits)
     # [0-9a-z]* = Can have any lower case alphas/digits after the initial digits
-    # (?:$|\s|\.|\?) = must end with whitespace or terminal punctuation
-    parts = re.findall(r'(?:^|\s)(\d{3,}[0-9a-z]*)(?:$|\s|\.|\?)', text)
+    # (?:$|\s|\.|\?) = must end with whitespace or terminal punctuation (but not eg 299.99)
+    parts = re.findall(r'(?:^|\s)(\d{3,}[0-9a-z]*)(?:$|\s|\.\s|\?)', text)
     # My regex skills can only go so far... further prune parts list
     # Get a list of all words, split on alphanumeric or whitespace
     all_words = re.compile(r'[\s\W]+').split(text)
@@ -83,6 +83,8 @@ assert(get_parts('2016') == [])  # year, not part
 assert(get_parts('Currently we have over 1000 sets in our possession and maybe like 4000 figs.') == [])  # Just assume any round number is not a part
 assert(get_parts('Super Star Destroyer: 2375 feet (3001.9 meters)') == [])
 assert(get_parts('It has 2526 pieces') == [])
+assert(get_parts('With a 299.99 price tag.. yeesh.') == [])
+
 
 log("Logging in")
 user_agent = "python:legoparts:v1.1 (by /u/someotheridiot) "
