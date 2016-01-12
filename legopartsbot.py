@@ -16,6 +16,13 @@ def log(msg):
     print(datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S") + ' - ' + msg)
 
 
+def already_replied(comment):
+    for c in comment.replies:
+        if c.author.name == 'legopartsbot':
+            return True
+    return False
+
+
 def get_part_details(part_id):
     url = "https://rebrickable.com/api/get_part?key=" + RB_API_KEY + "&format=json&part_id=" + part_id
     r = requests.get(url)
@@ -44,13 +51,13 @@ def get_parts(text):
 
     # BrickLink URLs
     # (?:P=) = Start with P= (url param)
-    # (?:$|\s|\.\s|\?|&|#) = End with whitespace or next URL param
-    parts.extend(re.findall(r'(?:P=)(\d{3,}[0-9a-z]*)(?:$|\s|\.\s|\?|&|#)', text))
+    # (?:$|\s|\.\s|\?|&|##|\)) = End with whitespace or next URL param
+    parts.extend(re.findall(r'(?:P=)(\d{3,}[0-9a-z]*)(?:$|\s|\.\s|\?|&|#|\))', text))
 
     # Rebrickable URLs
     # (?:rebrickable.com\/parts\/) = Start with rebrickable.com/parts/
-    # (?:$|\s|\.\s|/ = End with whitespace or /
-    parts.extend(re.findall(r'(?:rebrickable.com\/parts\/)(\d{3,}[0-9a-z]*)(?:$|\s|\.\s|/)', text))
+    # (?:$|\s|\.\s|/|\)) = End with whitespace or /
+    parts.extend(re.findall(r'(?:rebrickable.com\/parts\/)(\d{3,}[0-9a-z]*)(?:$|\s|\.\s|/|\))', text))
 
     # De-dup the list
     parts = list(set(parts))
@@ -70,7 +77,7 @@ def get_parts(text):
         if len(all_words)>i+1 and all_words[i+1].lower() in ['feet','inches','meters','cms','m','years','hours','hrs',
                                                              'pieces','parts']:
             parts.remove(p)
-    log("Parts = " + str(parts))
+    #log("Parts = " + str(parts))
     return parts
 
 
@@ -104,6 +111,7 @@ assert(get_parts('http://alpha.bricklink.com/pages/clone/catalogitem.page?P=9687
 assert(get_parts('https://alpha.bricklink.com/pages/clone/catalogitem.page?P=6538c#T=C') == ['6538c'])
 assert(get_parts('http://rebrickable.com/parts/4212b') == ['4212b'])
 assert(get_parts('http://rebrickable.com/parts/4212b/blah') == ['4212b'])
+assert(get_parts('truck. [Here is the frame.](http://rebrickable.com/parts/4212b) It') == ['4212b'])
 
 log("Logging in")
 user_agent = "python:legoparts:v1.1 (by /u/someotheridiot) "
@@ -111,8 +119,9 @@ r = praw.Reddit(user_agent=user_agent)
 o = OAuth2Util.OAuth2Util(r)
 o.refresh(force=True)
 
-subreddits = ['legopartsbottest', 'lego']
+#subreddits = ['legopartsbottest', 'lego']
 #subreddits = ['legopartsbottest']
+subreddits = ['lego']
 
 config = configparser.ConfigParser()
 config.read(CONFIG_FILE)
@@ -137,6 +146,14 @@ while True:
         new_last_processed_time = last_processed_time
         log("last processed time = " + str(last_processed_time))
 
+
+        # Just focus on specific thread
+        if False:
+            submission = r.get_submission(submission_id='40ixfb')
+            submission.replace_more_comments(limit=None, threshold=0)
+            sub_comments = submission.comments
+            last_processed_time = 0
+
         first = True
         try:
             for comment in sub_comments:
@@ -153,8 +170,14 @@ while True:
 
                 log(" By: " + comment.author.name)
                 if comment.author.name in ['LegoLinkBot', 'legopartsbot']:
-                    log("Skipping")
+                    log("Skipping bot author")
                     continue
+
+                # Make sure I haven't already replied (timestamps handle this usually, but sometimes I rerun manually)
+                if already_replied(comment):
+                    log("Already replied, skipping")
+                    continue
+
 
                 #log(" Body: " + comment.body)
                 parts = get_parts(comment.body)
@@ -177,12 +200,19 @@ while True:
                     reply += "*****\n"
                     reply += "I'm a bot! I try to identify LEGO part numbers in comments and display details of those parts using the [Rebrickable API](https://rebrickable.com). Created by /u/someotheridiot"
                     if num_found > 0:
-                        log(" Replying for " + str(num_found) + " parts")
+                        log(" REPLYING for " + str(num_found) + " parts")
                         try:
                             comment.reply(reply)
                             time.sleep(30)
                         except praw.errors.RateLimitExceeded:
+                            log("Rate limited... waiting a bit")
                             time.sleep(600)
+                            try:
+                                comment.reply(reply)
+                                time.sleep(30)
+                            except praw.errors.RateLimitExceeded:
+                                log("Dang... give up")
+
         except Exception as e:
             # Can't connect to Reddit... just sleep and try again
             log("Exception: " + str(e))
