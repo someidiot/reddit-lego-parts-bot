@@ -41,6 +41,20 @@ def get_parts(text):
     # [0-9a-z]* = Can have any lower case alphas/digits after the initial digits
     # (?:$|\s|\.|\?) = must end with whitespace or terminal punctuation (but not eg 299.99)
     parts = re.findall(r'(?:^|\s)(\d{3,}[0-9a-z]*)(?:$|\s|\.\s|\?)', text)
+
+    # BrickLink URLs
+    # (?:P=) = Start with P= (url param)
+    # (?:$|\s|\.\s|\?|&|#) = End with whitespace or next URL param
+    parts.extend(re.findall(r'(?:P=)(\d{3,}[0-9a-z]*)(?:$|\s|\.\s|\?|&|#)', text))
+
+    # Rebrickable URLs
+    # (?:rebrickable.com\/parts\/) = Start with rebrickable.com/parts/
+    # (?:$|\s|\.\s|/ = End with whitespace or /
+    parts.extend(re.findall(r'(?:rebrickable.com\/parts\/)(\d{3,}[0-9a-z]*)(?:$|\s|\.\s|/)', text))
+
+    # De-dup the list
+    parts = list(set(parts))
+
     # My regex skills can only go so far... further prune parts list
     # Get a list of all words, split on alphanumeric or whitespace
     all_words = re.compile(r'[\s\W]+').split(text)
@@ -56,8 +70,8 @@ def get_parts(text):
         if len(all_words)>i+1 and all_words[i+1].lower() in ['feet','inches','meters','cms','m','years','hours','hrs',
                                                              'pieces','parts']:
             parts.remove(p)
-    #log("Parts = " + str(parts))
-    return list(set(parts))
+    log("Parts = " + str(parts))
+    return parts
 
 
 # Some tests to make sure the regex works for all cases
@@ -84,7 +98,12 @@ assert(get_parts('Currently we have over 1000 sets in our possession and maybe l
 assert(get_parts('Super Star Destroyer: 2375 feet (3001.9 meters)') == [])
 assert(get_parts('It has 2526 pieces') == [])
 assert(get_parts('With a 299.99 price tag.. yeesh.') == [])
-
+# https://www.reddit.com/r/lego/comments/40ixfb/lets_talk_about_permanent_connections_not/
+assert(get_parts('https://alpha.bricklink.com/pages/clone/catalogitem.page?P=32305&idColor=10#T=C&C=10') == ['32305'])
+assert(get_parts('http://alpha.bricklink.com/pages/clone/catalogitem.page?P=96874#T=S&O={}') == ['96874'])
+assert(get_parts('https://alpha.bricklink.com/pages/clone/catalogitem.page?P=6538c#T=C') == ['6538c'])
+assert(get_parts('http://rebrickable.com/parts/4212b') == ['4212b'])
+assert(get_parts('http://rebrickable.com/parts/4212b/blah') == ['4212b'])
 
 log("Logging in")
 user_agent = "python:legoparts:v1.1 (by /u/someotheridiot) "
