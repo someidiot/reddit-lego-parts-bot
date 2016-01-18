@@ -73,10 +73,17 @@ def get_parts(text):
         if p[-2:] == '00' or p[-3:] == '000' or p[-4:] == '0000':
             # Exclude round numbers like 200, 600, 4000 as they are most likely not referring to parts
             parts.remove(p)
+        
+        # Look at surrounding words
         i = all_words.index(p)
+        
         if len(all_words)>i+1 and all_words[i+1].lower() in ['feet','inches','meters','cms','m','years','hours','hrs',
                                                              'pieces','parts']:
             parts.remove(p)
+        if p == '3245' and i>=1 and all_words[i-1].lower() == 'arocs':
+            # Uggghhh very specific exception "Arocs 3245" (set 42043)
+            parts.remove(p)
+    
     #log("Parts = " + str(parts))
     return parts
 
@@ -112,6 +119,7 @@ assert(get_parts('https://alpha.bricklink.com/pages/clone/catalogitem.page?P=653
 assert(get_parts('http://rebrickable.com/parts/4212b') == ['4212b'])
 assert(get_parts('http://rebrickable.com/parts/4212b/blah') == ['4212b'])
 assert(get_parts('truck. [Here is the frame.](http://rebrickable.com/parts/4212b) It') == ['4212b'])
+assert(get_parts('the Mercedes-Benz Arocs 3245 (Technic set 42043) as that') == [])
 
 log("Logging in")
 user_agent = "python:legoparts:v1.1 (by /u/someotheridiot) "
