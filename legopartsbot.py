@@ -24,9 +24,10 @@ def already_replied(comment):
 
 
 def get_part_details(part_id):
-    url = "https://rebrickable.com/api/get_part?key=" + RB_API_KEY + "&format=json&part_id=" + part_id
+    url = "https://rebrickable.com/api/get_part?key=" + RB_API_KEY + "&format=json&part_id=" + part_id + "&inc_colors=0&inc_cost=1"
     r = requests.get(url)
     if r.status_code == 200:
+        #log(r.text)
         if r.text == "NOPART":
             return {}
         else:
@@ -34,6 +35,7 @@ def get_part_details(part_id):
             url = "https://rebrickable.com/api/get_set?key=" + RB_API_KEY + "&format=json&set_id=" + part_id + "-1"
             s = requests.get(url)
             if s.status_code == 200:
+                #log(s.text)
                 if s.text == "NOSET":
                     # Keep the part
                     return r.json()
@@ -127,9 +129,8 @@ r = praw.Reddit(user_agent=user_agent)
 o = OAuth2Util.OAuth2Util(r)
 o.refresh(force=True)
 
-#subreddits = ['legopartsbottest', 'lego']
+subreddits = ['legopartsbottest', 'lego']
 #subreddits = ['legopartsbottest']
-subreddits = ['lego']
 
 config = configparser.ConfigParser()
 config.read(CONFIG_FILE)
@@ -192,17 +193,19 @@ while True:
 
                 if parts:
                     log(" Found parts: " + " ".join(parts))
-                    reply = "Part ID | Image | Name | Years\n"
-                    reply += "--|--|--|--\n"
+                    reply = "Part ID | Image | Name | Years | Median Price (USD)\n"
+                    reply += "--|--|--|--|--\n"
                     num_found = 0
                     for part in parts:
                         part_details = get_part_details(part)
+                        #log(str(part_details))
                         if part_details and 'part_url' in part_details:
                             reply += "[" + part + "](" + part_details['part_url'] + ")|"
                             reply += "[img](" + part_details['part_img_url'] + ")|"
                             reply += part_details['name'] + "|"
                             if part_details['year1'] != 0 and part_details['year2'] != 0:
-                                reply += str(part_details['year1']) + " to " + str(part_details['year2'])
+                                reply += str(part_details['year1']) + " to " + str(part_details['year2']) + "|"
+                            reply += "$" + part_details['part_costs']['median_cost']
                             reply += "\n"
                             num_found += 1
                     reply += "*****\n"
@@ -233,4 +236,4 @@ while True:
 
     # Wait and run again
     log("Sleeping")
-    time.sleep(300)
+    time.sleep(120)
