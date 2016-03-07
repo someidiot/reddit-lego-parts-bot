@@ -129,8 +129,8 @@ r = praw.Reddit(user_agent=user_agent)
 o = OAuth2Util.OAuth2Util(r)
 o.refresh(force=True)
 
-subreddits = ['legopartsbottest', 'lego']
-#subreddits = ['legopartsbottest']
+subreddits = ['lego']
+subreddits = ['legopartsbottest']
 
 config = configparser.ConfigParser()
 config.read(CONFIG_FILE)
@@ -205,10 +205,11 @@ while True:
                             reply += part_details['name'] + "|"
                             if part_details['year1'] != 0 and part_details['year2'] != 0:
                                 reply += str(part_details['year1']) + " to " + str(part_details['year2']) + "|"
-                            reply += "$" + part_details['part_costs']['median_cost']
+                            reply += "$" + str(part_details['part_costs']['median_cost']) + " ^((from " + str(part_details['part_costs']['num_costs']) + " prices)^)"
                             reply += "\n"
                             num_found += 1
                     reply += "*****\n"
+                    reply += "*Prices based on BrickOwl stores from the last 24 hrs. Only considers NEW parts, and takes the median cost over all available stores, then averages over all colors.*  \n"
                     reply += "I'm a bot! I try to identify LEGO part numbers in comments and display details of those parts using the [Rebrickable API](https://rebrickable.com). Created by /u/someotheridiot"
                     if num_found > 0:
                         log(" REPLYING for " + str(num_found) + " parts")
