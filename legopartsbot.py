@@ -129,7 +129,7 @@ r = praw.Reddit(user_agent=user_agent)
 o = OAuth2Util.OAuth2Util(r)
 o.refresh(force=True)
 
-subreddits = ['lego']
+subreddits = ['lego', 'legopartsbottest']
 #subreddits = ['legopartsbottest']
 
 config = configparser.ConfigParser()
