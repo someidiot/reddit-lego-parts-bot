@@ -24,16 +24,17 @@ def already_replied(comment):
 
 
 def get_part_details(part_id):
-    url = DOMAIN + "/api/get_part?key=" + RB_API_KEY + "&format=json&part_id=" + part_id + "&inc_colors=0&inc_cost=1"
-    r = requests.get(url)
+    url = "https://rebrickable.com/api/get_part?key=" + RB_API_KEY + "&format=json&part_id=" + part_id + "&inc_colors=0&inc_cost=1"
+    # Need a Host header or will get kicked when running from localhost
+    r = requests.get(url, headers={"Host": "rebrickable.com"})
     if r.status_code == 200:
         #log(r.text)
         if r.text == "NOPART":
             return {}
         else:
             # Valid part, make sure it's not a valid set too (which is the most common use case of the number)
-            url = DOMAIN + "/api/get_set?key=" + RB_API_KEY + "&format=json&set_id=" + part_id + "-1"
-            s = requests.get(url)
+            url = "https://rebrickable.com/api/get_set?key=" + RB_API_KEY + "&format=json&set_id=" + part_id + "-1"
+            s = requests.get(url, headers={"Host": "rebrickable.com"})
             if s.status_code == 200:
                 #log(s.text)
                 if s.text == "NOSET":
