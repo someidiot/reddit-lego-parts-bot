@@ -24,7 +24,7 @@ def already_replied(comment):
 
 
 def get_part_details(part_id):
-    url = "https://rebrickable.com/api/get_part?key=" + RB_API_KEY + "&format=json&part_id=" + part_id + "&inc_colors=0&inc_cost=1"
+    url = DOMAIN + "/api/get_part?key=" + RB_API_KEY + "&format=json&part_id=" + part_id + "&inc_colors=0&inc_cost=1"
     r = requests.get(url)
     if r.status_code == 200:
         #log(r.text)
@@ -32,7 +32,7 @@ def get_part_details(part_id):
             return {}
         else:
             # Valid part, make sure it's not a valid set too (which is the most common use case of the number)
-            url = "https://rebrickable.com/api/get_set?key=" + RB_API_KEY + "&format=json&set_id=" + part_id + "-1"
+            url = DOMAIN + "/api/get_set?key=" + RB_API_KEY + "&format=json&set_id=" + part_id + "-1"
             s = requests.get(url)
             if s.status_code == 200:
                 #log(s.text)
@@ -136,8 +136,10 @@ config = configparser.ConfigParser()
 config.read(CONFIG_FILE)
 if "rebrickable" in config:
     RB_API_KEY = config["rebrickable"].get('api_key', "")
+    DOMAIN = config["rebrickable"].get('domain', "https://rebrickable.com")
 else:
     RB_API_KEY = ""
+    DOMAIN = ""
 
 while True:
     for subreddit in subreddits:
