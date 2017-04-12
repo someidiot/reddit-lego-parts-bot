@@ -11,6 +11,8 @@ import time
 
 CONFIG_FILE = 'config.ini'
 
+IGNORE_BOTS = ['LegoLinkBot', 'legopartsbot', 'LEGO_IDEAS_BOT']
+
 
 def log(msg):
     print(datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S") + ' - ' + msg)
@@ -24,7 +26,7 @@ def already_replied(comment):
 
 
 def get_part_details(part_id):
-    url = "https://rebrickable.com/api/get_part?key=" + RB_API_KEY + "&format=json&part_id=" + part_id + "&inc_colors=0&inc_cost=1"
+    url = "http://rebrickable.com/api/get_part?key=" + RB_API_KEY + "&format=json&part_id=" + part_id + "&inc_colors=0&inc_cost=1"
     # Need a Host header or will get kicked when running from localhost
     r = requests.get(url, headers={"Host": "rebrickable.com"})
     if r.status_code == 200:
@@ -33,7 +35,7 @@ def get_part_details(part_id):
             return {}
         else:
             # Valid part, make sure it's not a valid set too (which is the most common use case of the number)
-            url = "https://rebrickable.com/api/get_set?key=" + RB_API_KEY + "&format=json&set_id=" + part_id + "-1"
+            url = "http://rebrickable.com/api/get_set?key=" + RB_API_KEY + "&format=json&set_id=" + part_id + "-1"
             s = requests.get(url, headers={"Host": "rebrickable.com"})
             if s.status_code == 200:
                 #log(s.text)
@@ -79,11 +81,11 @@ def get_parts(text):
         
         # Look at surrounding words
         i = all_words.index(p)
-        
-        if len(all_words)>i+1 and all_words[i+1].lower() in ['feet','inches','meters','cms','m','years','hours','hrs',
-                                                             'pieces','parts']:
+
+        if len(all_words) > i + 1 and all_words[i + 1].lower() in ['feet', 'inches', 'meters', 'cms', 'm', 'years',
+                                                                   'hours', 'hrs', 'pieces', 'parts']:
             parts.remove(p)
-        if p == '3245' and i>=1 and all_words[i-1].lower() == 'arocs':
+        if p == '3245' and i >= 1 and all_words[i - 1].lower() == 'arocs':
             # Uggghhh very specific exception "Arocs 3245" (set 42043)
             parts.remove(p)
     
@@ -181,7 +183,7 @@ while True:
                     break
 
                 log(" By: " + comment.author.name)
-                if comment.author.name in ['LegoLinkBot', 'legopartsbot']:
+                if comment.author.name in IGNORE_BOTS:
                     log("Skipping bot author")
                     continue
 
@@ -190,8 +192,6 @@ while True:
                     log("Already replied, skipping")
                     continue
 
-
-                #log(" Body: " + comment.body)
                 parts = get_parts(comment.body)
 
                 if parts:
