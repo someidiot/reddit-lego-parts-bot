@@ -26,24 +26,20 @@ def already_replied(comment):
 
 
 def get_part_details(part_id):
-    url = "http://rebrickable.com/api/get_part?key=" + RB_API_KEY + "&format=json&part_id=" + part_id + "&inc_colors=0&inc_cost=1"
+    url = "http://rebrickable.com/api/v3/lego/parts/{p}/?key={k}&inc_prices=1".format(p=part_id, k=RB_API_KEY)
+    #key=" + RB_API_KEY + "&format=json&part_id=" + part_id + "&inc_colors=0&inc_cost=1"
     # Need a Host header or will get kicked when running from localhost
     r = requests.get(url, headers={"Host": "rebrickable.com"})
     if r.status_code == 200:
-        #log(r.text)
-        if r.text == "NOPART":
+        # Valid part, make sure it's not a valid set too (which is the most common use case of the number)
+        url = "http://rebrickable.com/api/v3/lego/sets/{s}/?key={k}".format(s=part_id, k=RB_API_KEY)
+        # ?key=" + RB_API_KEY + "&format=json&set_id=" + part_id + "-1"
+        s = requests.get(url, headers={"Host": "rebrickable.com"})
+        if s.status_code == 200:
             return {}
-        else:
-            # Valid part, make sure it's not a valid set too (which is the most common use case of the number)
-            url = "http://rebrickable.com/api/get_set?key=" + RB_API_KEY + "&format=json&set_id=" + part_id + "-1"
-            s = requests.get(url, headers={"Host": "rebrickable.com"})
-            if s.status_code == 200:
-                #log(s.text)
-                if s.text == "NOSET":
-                    # Keep the part
-                    return r.json()
-                else:
-                    return {}
+        elif s.status_code == 404:
+            # Keep the part
+            return r.json()
     return {}
 
 
@@ -196,7 +192,7 @@ while True:
 
                 if parts:
                     log(" Found parts: " + " ".join(parts))
-                    reply = "Part ID | Image | Name | Years | Median Price (USD)\n"
+                    reply = "Part | Image | Name | Years | Avg Price (USD)\n"
                     reply += "--|--|--|--|--\n"
                     num_found = 0
                     for part in parts:
@@ -206,14 +202,14 @@ while True:
                             reply += "[" + part + "](" + part_details['part_url'] + ")|"
                             reply += "[img](" + part_details['part_img_url'] + ")|"
                             reply += part_details['name'] + "|"
-                            if part_details['year1'] != 0 and part_details['year2'] != 0:
-                                reply += str(part_details['year1']) + " to " + str(part_details['year2']) + "|"
-                            reply += "$" + str(part_details['part_costs']['median_cost']) + " ^((from " + str(part_details['part_costs']['num_costs']) + " prices)^)"
+                            if part_details['year_from'] != 0 and part_details['year_to'] != 0:
+                                reply += str(part_details['year_from']) + " to " + str(part_details['year_to']) + "|"
+                            reply += "$" + str(part_details['price_data']['avg_cost'])# + " ^((from " + str(part_details['price_data']['num_costs']) + " prices)^)"
                             reply += "\n"
                             num_found += 1
                     reply += "*****\n"
-                    reply += "*Prices based on BrickOwl stores from the last 24 hrs. Only considers NEW parts, and takes the median cost over all available stores, then averages over all colors.*  \n"
-                    reply += "I'm a bot! I try to identify LEGO part numbers in comments and display details of those parts using the [Rebrickable API](https://rebrickable.com). Created by someotheridiot"
+                    reply += "^(*Prices based on BrickLink and BrickOwl stores from the last 24 hrs. Only considers NEW parts, and takes the average cost over all stores and colors.*)  \n"
+                    reply += "^(*I'm a bot! I try to identify LEGO part numbers use the Rebrickable API to get more details. Created by someotheridiot.*)"
                     if num_found > 0:
                         log(" REPLYING for " + str(num_found) + " parts")
                         try:
