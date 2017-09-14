@@ -209,7 +209,7 @@ while True:
                             num_found += 1
                     reply += "*****\n"
                     reply += "^(*Prices based on BrickLink and BrickOwl stores from the last 24 hrs. Only considers NEW parts, and takes the average cost over all stores and colors.*)  \n"
-                    reply += "^(*I'm a bot! I try to identify LEGO part numbers use the Rebrickable API to get more details. Created by someotheridiot.*)"
+                    reply += "^(I'm a bot! I try to identify LEGO part numbers using the) [^Rebrickable ^API](https://rebrickable.com/api/) ^(to get more details. Created by someotheridiot.)"
                     if num_found > 0:
                         log(" REPLYING for " + str(num_found) + " parts")
                         try:
