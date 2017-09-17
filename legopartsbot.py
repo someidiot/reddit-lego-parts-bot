@@ -129,7 +129,7 @@ o = OAuth2Util.OAuth2Util(r)
 o.refresh(force=True)
 
 subreddits = ['lego', 'legopartsbottest']
-subreddits = ['legopartsbottest']
+#subreddits = ['legopartsbottest']
 
 config = configparser.ConfigParser()
 config.read(CONFIG_FILE)
