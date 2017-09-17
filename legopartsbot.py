@@ -26,13 +26,13 @@ def already_replied(comment):
 
 
 def get_part_details(part_id):
-    url = "http://rebrickable.com/api/v3/lego/parts/{p}/?key={k}&inc_prices=1".format(p=part_id, k=RB_API_KEY)
+    url = "{d}/api/v3/lego/parts/{p}/?key={k}&inc_prices=1".format(d=DOMAIN, p=part_id, k=RB_API_KEY)
     #key=" + RB_API_KEY + "&format=json&part_id=" + part_id + "&inc_colors=0&inc_cost=1"
     # Need a Host header or will get kicked when running from localhost
     r = requests.get(url, headers={"Host": "rebrickable.com"})
     if r.status_code == 200:
         # Valid part, make sure it's not a valid set too (which is the most common use case of the number)
-        url = "http://rebrickable.com/api/v3/lego/sets/{s}/?key={k}".format(s=part_id, k=RB_API_KEY)
+        url = "{d}/api/v3/lego/sets/{s}/?key={k}".format(d=DOMAIN, s=part_id, k=RB_API_KEY)
         # ?key=" + RB_API_KEY + "&format=json&set_id=" + part_id + "-1"
         s = requests.get(url, headers={"Host": "rebrickable.com"})
         if s.status_code == 200:
@@ -129,7 +129,7 @@ o = OAuth2Util.OAuth2Util(r)
 o.refresh(force=True)
 
 subreddits = ['lego', 'legopartsbottest']
-#subreddits = ['legopartsbottest']
+subreddits = ['legopartsbottest']
 
 config = configparser.ConfigParser()
 config.read(CONFIG_FILE)
