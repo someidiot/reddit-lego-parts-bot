@@ -32,7 +32,7 @@ def get_part_details(part_id):
     r = requests.get(url, headers={"Host": "rebrickable.com"})
     if r.status_code == 200:
         # Valid part, make sure it's not a valid set too (which is the most common use case of the number)
-        url = "{d}/api/v3/lego/sets/{s}/?key={k}".format(d=DOMAIN, s=part_id, k=RB_API_KEY)
+        url = "{d}/api/v3/lego/sets/{s}-1/?key={k}".format(d=DOMAIN, s=part_id, k=RB_API_KEY)
         # ?key=" + RB_API_KEY + "&format=json&set_id=" + part_id + "-1"
         s = requests.get(url, headers={"Host": "rebrickable.com"})
         if s.status_code == 200:
@@ -68,7 +68,7 @@ def get_parts(text):
     all_words = re.compile(r'[\s\W]+').split(text)
     #log("Words = " + str(all_words))
     for p in parts[:]:
-        if p in ['2013','2014','2015','2016','2017','2018','2019','2020']:
+        if p in ['2013', '2014', '2015', '2016', '2017', '2018', '2019', '2020']:
             # Years
             parts.remove(p)
         if p[-2:] == '00' or p[-3:] == '000' or p[-4:] == '0000':
@@ -129,7 +129,7 @@ o = OAuth2Util.OAuth2Util(r)
 o.refresh(force=True)
 
 subreddits = ['lego', 'legopartsbottest']
-#subreddits = ['legopartsbottest']
+subreddits = ['legopartsbottest']
 
 config = configparser.ConfigParser()
 config.read(CONFIG_FILE)
@@ -208,8 +208,7 @@ while True:
                             reply += "\n"
                             num_found += 1
                     reply += "*****\n"
-                    reply += "^(*Prices based on BrickLink and BrickOwl stores from the last 24 hrs. Only considers NEW parts, and takes the average cost over all stores and colors.*)  \n"
-                    reply += "^(I'm a bot! I try to identify LEGO part numbers using the) [^Rebrickable ^API](https://rebrickable.com/api/) ^(to get more details. Created by someotheridiot.)"
+                    reply += "^(I'm a bot! I try to identify LEGO part numbers using the) [^Rebrickable ^API](https://rebrickable.com/api/) ^(Prices are averaged over the last 24 hrs. )"
                     if num_found > 0:
                         log(" REPLYING for " + str(num_found) + " parts")
                         try:
