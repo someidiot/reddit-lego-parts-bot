@@ -123,16 +123,23 @@ assert(get_parts('truck. [Here is the frame.](http://rebrickable.com/parts/4212b
 assert(get_parts('the Mercedes-Benz Arocs 3245 (Technic set 42043) as that') == [])
 
 log("Logging in")
+
+config = configparser.ConfigParser()
+config.read(CONFIG_FILE)
+
+
 user_agent = "python:legoparts:v1.1 (by /u/someotheridiot) "
-r = praw.Reddit(user_agent=user_agent)
-o = OAuth2Util.OAuth2Util(r)
-o.refresh(force=True)
+r = praw.Reddit(user_agent=user_agent,
+                client_id=config['auth'].get('app_key'),
+                client_secret=config['auth'].get('app_secret'),
+                username=config['auth'].get('username'),
+                password=config['auth'].get('password'))
+#o = OAuth2Util.OAuth2Util(r)
+#o.refresh(force=True)
 
 subreddits = ['lego', 'legopartsbottest']
 #subreddits = ['legopartsbottest']
 
-config = configparser.ConfigParser()
-config.read(CONFIG_FILE)
 if "rebrickable" in config:
     RB_API_KEY = config["rebrickable"].get('api_key', "")
     DOMAIN = config["rebrickable"].get('domain', "https://rebrickable.com")
@@ -146,8 +153,8 @@ while True:
         log("")
         log("Scanning /r/" + subreddit)
 
-        sub = r.get_subreddit(subreddit)
-        sub_comments = sub.get_comments()
+        sub = r.subreddit(subreddit)
+        sub_comments = sub.comments()
 
         if subreddit in config:
             last_processed_time = float(config[subreddit].get('last_processed_time', 0))
@@ -155,7 +162,6 @@ while True:
             last_processed_time = 0
         new_last_processed_time = last_processed_time
         log("last processed time = " + str(last_processed_time))
-
 
         # Just focus on specific thread
         if False:
